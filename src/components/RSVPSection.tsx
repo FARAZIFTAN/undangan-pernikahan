@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { Send, Check, User, Users, MessageSquare } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export default function RSVPSection() {
   const [formData, setFormData] = useState({
@@ -34,6 +34,10 @@ export default function RSVPSection() {
     setError('');
 
     try {
+      if (!supabase) {
+        throw new Error('SUPABASE_NOT_CONFIGURED');
+      }
+
       const { error: dbError } = await supabase.from('rsvp_responses').insert({
         guest_name: formData.name,
         number_of_guests: parseInt(formData.guestCount),
@@ -44,7 +48,11 @@ export default function RSVPSection() {
       if (dbError) throw dbError;
       setIsSubmitted(true);
     } catch {
-      setError('Terjadi kesalahan. Silakan coba lagi.');
+      setError(
+        isSupabaseConfigured
+          ? 'Terjadi kesalahan. Silakan coba lagi.'
+          : 'RSVP belum aktif. Admin belum menyiapkan konfigurasi.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -159,7 +167,7 @@ export default function RSVPSection() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isSupabaseConfigured}
               className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60"
             >
               {isSubmitting ? (
